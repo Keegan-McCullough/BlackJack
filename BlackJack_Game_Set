@@ -1,0 +1,265 @@
+import random
+
+#Deck Of Cards class that will hold the tested shoe cards
+
+class DeckOfCards:
+    def __init__(self):
+        self.suits = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
+        self.values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']
+        self.deck = [(value, suit) for i in range(3) for suit in self.suits for value in self.values]
+        self.shuffle_deck()
+# shuffle the deck so its not in suit order
+    def shuffle_deck(self):
+        random.shuffle(self.deck)
+# draw card to recieve a card and tak it from the deck
+    def draw_card(self):
+        if len(self.deck) == 0:
+            self.reset_deck()
+        return self.deck.pop()
+# when out of cards take all the cards and shuffle to reset the shoe
+    def reset_deck(self):
+        self.deck = [(value, suit) for i in range(3) for suit in self.suits for value in self.values]
+        self.shuffle_deck()
+
+        
+# calculate the value of the hand to know distnace from 21 and risk   
+def calculate_hand_value(hand):
+    total_value = 0
+    for card in hand:
+        if card[0] in ['2', '3', '4', '5', '6', '7', '8', '9', '10']:
+            total_value += int(card[0])
+        elif card[0] in ['Jack', 'Queen', 'King']:
+            total_value += 10
+        elif total_value + 11 <= 21:
+            total_value += 11
+        else:
+            total_value+=1
+    return total_value
+
+# general strategy of what the player should do given the cards and what the dealer has
+
+
+def blackjack_strategy(players_total, dealers_card, cards):
+    has_ace = any(card == 'Ace' for card in cards)
+# hard hands   
+    if not has_ace:
+        
+        if players_total <= 9:
+            return 'Hit'
+        elif players_total == 9:
+            if dealers_card >= 3 and dealers_card < 6:
+                return 'Double Down'
+            else:
+                return 'Hit'
+        elif players_total == 10:
+            if dealers_card < 10:
+                return 'Double Down'
+            else:
+                return 'Hit'
+        elif players_total == 11:
+            return 'Double Down'
+        elif players_total == 12:
+            if dealers_card in [2, 3, 7, 8, 9, 10, 11]:
+                return 'Hit'
+            else:
+                return 'Stay'
+        elif players_total <= 16:
+            if dealers_card in [7, 8, 9, 10, 11]:
+                return 'Hit'
+            else:
+                return 'Stay'
+        else:  # Player total is 17 or higher
+            return 'Stay'
+#soft hands        
+    else:
+        if players_total < 15:
+            if dealers_card in [5, 6]:
+                return 'Double Down'
+            else:
+                return 'Hit'
+        elif players_total < 17:
+            if dealers_card in [4,5,6]:
+                return 'Double Down'
+            else:
+                return 'Hit'
+        elif players_total == 17:
+            if dealers_card in [3,4,5,6]:
+                return 'Double Down'
+            else:
+                return 'Hit'
+        elif players_total == 18:
+            if dealers_card < 9:
+                return 'Stay'
+            else:
+                return 'Hit'
+        else:
+            return 'Stay'
+
+# Deeper strategy of blackjack
+
+
+def splits_cards(dealers_value, cards):
+    # Count the occurrences of each card value using a list comprehension
+    number_of_cards = len(cards) - 1
+    card_value_counts = {card: cards.count(card) for card in set(cards)}
+
+    # Check if any card value occurs more than once
+    can_split = any(count >= 2 for count in card_value_counts.values())
+    
+    value = cards[number_of_cards][0] 
+    if can_split:
+        if value == 'Ace' or value == '8':
+            return True
+        elif value == '9':
+            if dealers_value not in [7, 10, 11]:
+                return True
+        elif value == '7':
+            if dealers_value < 8:
+                return True
+        elif value == '6':
+            if dealers_value < 7 and dealers_value > 2:
+                return True
+        elif value == '3' or value == '2':
+            if dealers_value in [4,5,6,7]:
+                return True
+    return None
+
+# Creating a game of blackjack with book moves implemented testing betting strategies
+
+
+shoe = DeckOfCards()
+
+def games(n, amount, be, stop):
+    win_percentage = 4222
+    winnings = []
+    real_winnings = []
+    for i in range(n):
+        money = amount
+        bet = be
+
+# functiom runs until out of money or thge cashout limit is hit
+        while money > 0 and money < stop:
+            if money < bet:
+                bet = 5
+            odds = random.randrange(0,10000,1)
+            if odds <= win_percentage:
+                money += 2*bet
+                bet = 5
+            else:
+                money -= bet
+                bet *= 2
+        winnings.append(money)
+
+        money = amount
+        bet = be
+
+        while money > 0 and money < stop:
+            if money < bet:
+                bet = 5
+            # creating the piles you see on a blackjack table    
+            dealers_cards = []
+            players_cards = []
+            players_cards2 = []
+            total_hands = []
+            burned_cards = []
+            
+            # dealing the cards creating the piles
+            burned_cards.append(shoe.draw_card())
+            players_cards.append(shoe.draw_card())
+            dealers_cards.append(shoe.draw_card())
+            players_cards.append(shoe.draw_card())
+            dealers_cards.append(shoe.draw_card())
+
+            dealers_value = calculate_hand_value(dealers_cards[1])
+            splits = splits_cards(dealers_value, players_cards)
+
+            # if splitting the deck happens then creates an extra hand
+            if splits:
+                players_cards2.append(players_cards.pop(1))
+                players_cards2.append(shoe.draw_card())
+                players_cards.append(shoe.draw_card())
+                players_total = calculate_hand_value(players_cards2)
+                decision = blackjack_strategy(players_total, dealers_value, players_cards2)
+
+            # betting and drawing until you stay with the new hand
+                while decision != 'Stay':
+                    if decision == 'Double Down':
+                        bet = 2*bet
+                    players_cards.append(shoe.draw_card())
+                    splits = splits_cards(dealers_value, players_cards)
+                    players_total = calculate_hand_value(players_cards)
+                    decision = blackjack_strategy(players_total, dealers_value, players_cards)
+                total_hands.append(players_total)
+
+            players_total = calculate_hand_value(players_cards)
+            decision = blackjack_strategy(players_total, dealers_value, players_cards)
+
+            # betting and drawing until you stay with the new hand
+            while decision != 'Stay':
+                if decision == 'Double Down':
+                    bet = 2*bet
+                players_cards.append(shoe.draw_card())
+                splits = splits_cards(dealers_value, players_cards)
+                players_total = calculate_hand_value(players_cards)
+                decision = blackjack_strategy(players_total, dealers_value, players_cards)
+
+            total_hands.append(players_total)   
+            dealers_total = calculate_hand_value(dealers_cards)
+
+            while dealers_total < max(total_hands) and dealers_total <= 17:
+                dealers_cards.append(shoe.draw_card())
+                dealers_total = calculate_hand_value(dealers_cards)
+
+            if players_total > 21 or (dealers_total < 21 and dealers_total >= players_total):
+                money -= bet
+                bet = 2*bet
+            else:
+                money = money + 2*bet
+                bet = be        
+        real_winnings.append(money)
+    return winnings, real_winnings
+
+# Testing betting strategies
+
+
+keys = []
+values = []
+results_dict = {}
+bank_size = 800
+for bet_size in range(5,100,5):
+    for s in range(20, 40):
+        stop = s*bank_size/10
+        r_win_rate, h_win_rate = games(100,bank_size,bet_size,stop)
+        r_total = 0
+        h_total = 0
+        r_wins = 0
+        h_wins = 0
+        for value in r_win_rate:
+            r_total = r_total + (int(value) - bank_size)
+            if int(value) > 0:
+                r_wins+=1
+        for value in h_win_rate:
+            h_total = h_total + (int(value) - bank_size)
+            if int(value) > 0:
+                h_wins+=1
+        keys.append('Bet:' + str(bet_size)+ ', Bank:' + str(bank_size)+ ', Stop:' + str(stop))
+        values.append((r_wins/1, h_wins/1, h_total, r_total))
+
+for i, key in enumerate(keys):
+    results_dict[key] = values[i]
+
+print("Most Amount of wins combo real then hypothetical")
+max_key1 = max(results_dict, key=lambda k: results_dict[k])
+r_maximum_wins = results_dict[max_key1]
+print(str(max_key1) + ' with ' + str(r_maximum_wins[0]) + '% wins')
+max_key1 = max(results_dict, key=lambda k: results_dict[k][1])
+h_maximum_wins = results_dict[max_key1]
+print(str(max_key1) + ' with ' + str(h_maximum_wins[0]) + '% wins')
+
+print('')
+print("Most amount of hypothetical gain")
+max_key2 = max(results_dict, key=lambda k: results_dict[k][2])
+print(max_key2)
+print("Most amount of real gain")
+max_key3 = max(results_dict, key=lambda k: results_dict[k][3])
+print(max_key3)
