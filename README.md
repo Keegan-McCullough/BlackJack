@@ -1,1 +1,1 @@
-This code creates a blackjack table with just a single players versus the dealer using ideal betting strategy. The goal of the code is to test the best betting pattern with the best parameters to improve the odds of taking the casinos money.
+This code uses ideal betting strategy to create a blackjack table with just a single player versus the dealer. The goal of the code is to test the best betting pattern with the best parameters to improve the odds of taking the casino's money.
