@@ -1,3 +1,6 @@
+from BlackJack_Rule_Set import games
+import random
+
 # Testing betting strategies
 
 keys = []
